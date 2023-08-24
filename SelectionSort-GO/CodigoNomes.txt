@@ -1,0 +1,147 @@
+package main
+
+import (
+	"bufio"
+	"fmt"
+	"math"
+	"os"
+	"strconv"
+	"time"
+)
+
+var countCompare int64
+var countChanges int64
+
+func Swap(menor *string, atual *string) {
+	countChanges++
+	aux := *atual
+	*atual = *menor
+	*menor = aux
+}
+
+func selectionSort(arr *[]string, n int) {
+	for i := 0; i < n-1; i++ {
+		menor := i
+		for j := i + 1; j < n; j++ {
+			if (*arr)[j] < (*arr)[menor] {
+				menor = j
+			}
+			countCompare++
+		}
+		Swap(&(*arr)[menor], &(*arr)[i])
+	}
+}
+
+func main() {
+	argumento := os.Args[1] // recebe via terminal a quantidade de registro
+	// verifica se foi passado algum argumento
+	if len(argumento) == 0 {
+		fmt.Println("Nenhum argumento fornecido.")
+		os.Exit(0)
+	}
+
+	// converte argumento para um numero inteiro
+	tamanho, err := strconv.Atoi(argumento)
+	// verifica erro na conversao
+	if err != nil {
+		fmt.Printf("Erro ao converter argumento para inteiro.")
+		os.Exit(1)
+	}
+
+	// Abre arquivo dos dados a serem ordenados
+	file, ferror := os.Open("nomes.txt")
+	if ferror != nil {
+		fmt.Println("Erro ao abrir arquivo nomes.txt")
+		os.Exit(1)
+	}
+
+	// Abre arquivo para armazenar os dados ordenados
+	file2, ferror := os.OpenFile("nomesOrdenados.txt", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if ferror != nil {
+		fmt.Println("Erro ao abrir arquivo nomesOrdenados.txt: ", ferror)
+		os.Exit(1)
+	}
+
+	// Fecha arquivo dos dados iniciais
+	defer func() {
+		if ferror := file.Close(); ferror != nil {
+			fmt.Println("Erro ao fechar arquivo nomes.txt")
+			os.Exit(1)
+		}
+	}()
+
+	// Fecha arquivo dos dados ordenados
+	defer func() {
+		if ferror := file2.Close(); ferror != nil {
+			fmt.Println("Erro ao fechar arquivo nomesOrdenados.txt")
+			os.Exit(1)
+		}
+	}()
+
+	// Scanner para ler cada linha do arquivo
+	scanner := bufio.NewScanner(file)
+
+	// slice para armazenar os dados lidos
+	dados := make([]string, 0)
+
+	// Ler cada linha e armazenar
+	for i := 0; i < tamanho; i++ {
+		// Verificar se há mais linhas para ler
+		if !scanner.Scan() {
+			// Verificar se ocorreu algum erro
+			if scanner.Err() != nil {
+				fmt.Println("Erro ao ler a linha:", scanner.Err())
+				os.Exit(1)
+			}
+			// Não há mais linhas para ler
+			break
+		}
+
+		// Obter o dado da linha atual
+		dado := scanner.Text()
+
+		// Adicionar o dado ao slice
+		dados = append(dados, dado)
+	}
+
+	// Verifica possivel erro na leitura do arquivo
+	if err := scanner.Err(); err != nil {
+		fmt.Println("Erro ao ler o arquivo nomes.txt:", err)
+		os.Exit(1)
+	}
+
+	// Medir o tempo de execução
+	start := time.Now()
+
+	// ordena os dados
+	selectionSort(&dados, tamanho)
+
+	// Calcular o tempo de execução
+	elapsed := time.Since(start)
+
+	// Escrever os dados ordenados no arquivo
+	for _, dado := range dados {
+		_, err := file2.WriteString(dado + "\n")
+		if err != nil {
+			fmt.Println("Erro ao escrever no arquivo nomesOrdenados.txt:", err)
+			os.Exit(1)
+		}
+	}
+
+	// Calcular o número de comparações
+	numComparacoes := (len(dados)*len(dados) - len(dados)) / 2
+
+	// Calcular o numero de trocas caso médio
+	trocasMelhor := 3 * (len(dados) - 1)
+
+	// Calcular o numero de trocas pior caso
+	trocarPior := ((len(dados) * len(dados)) / 4) + (3 * (len(dados) - 1))
+
+	// Calcular o numero de trocas no caso medio
+	y := float64(len(dados)) + float64(0.57721)
+	trocarMedio := len(dados) * (int(math.Log(y)))
+
+	// Imprimir o tempo de execução, comparacoes e trocas
+	fmt.Println(elapsed, numComparacoes, trocasMelhor, trocarPior, trocarMedio, countCompare, countChanges)
+
+}
